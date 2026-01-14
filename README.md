@@ -145,13 +145,13 @@ You can use these oneliners to **download and update ids** in one move
 >- UNIX, MACOS:  
 ```bash
   export TESTOMATIO=... && \
-  curl -L -O https://github.com/testomatio/java-check-tests/releases/latest/download/testomatio.jar && \
+  curl -L -O https://github.com/weavr-io/java-check-tests/releases/latest/download/testomatio.jar && \
   java -jar testomatio.jar sync
 ```
 >- WINDOWS cdm:  
 ```cmd
     set TESTOMATIO=...&& ^
-    curl -L -O https://github.com/testomatio/java-check-tests/releases/latest/download/testomatio.jar&& ^
+    curl -L -O https://github.com/weavr-io/java-check-tests/releases/latest/download/testomatio.jar&& ^
     java -jar testomatio.jar sync
 ```
 
