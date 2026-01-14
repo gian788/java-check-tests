@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 
 public class TestExportService {
     private static final Logger log = LoggerFactory.getLogger(TestExportService.class);
+    private static final int BATCH_SIZE = 1000;
 
     private final JavaFileParser fileParser;
     private final TestMethodExtractor extractor;
@@ -73,21 +74,67 @@ public class TestExportService {
                                    String apiKey, String serverUrl) {
         validateExportConfig(serverUrl);
 
-        String requestBody = jsonBuilder.buildRequestBody(allTestCases, framework);
         String requestUrl = serverUrl + "/api/load?api_key=" + apiKey;
 
-        spinner.start();
+        if (allTestCases.size() <= BATCH_SIZE) {
+            return exportSingleBatch(allTestCases, framework, requestUrl);
+        } else {
+            return exportInBatches(allTestCases, framework, requestUrl);
+        }
+    }
 
+    private int exportSingleBatch(List<TestCase> testCases, String framework,
+                                  String requestUrl) {
+        String requestBody = jsonBuilder.buildRequestBody(testCases, framework);
+
+        spinner.start();
         try {
             httpClient.sendPostRequest(requestUrl, requestBody);
+        } catch (CliException e) {
+            spinner.stop();
+            throw e;
         } catch (Exception e) {
-            throw new CliException("Error while executing request", e);
+            spinner.stop();
+            throw new CliException("Error while executing request: " + e.getMessage(), e);
+        }
+        spinner.stopWithMessage("Successfully exported " + testCases.size()
+                + " test methods");
+        return testCases.size();
+    }
+
+    private int exportInBatches(List<TestCase> allTestCases, String framework,
+                                String requestUrl) {
+        int totalTests = allTestCases.size();
+        int totalBatches = (totalTests + BATCH_SIZE - 1) / BATCH_SIZE;
+
+        log.info("Large test suite detected ({} tests). Sending in {} batches...",
+                totalTests, totalBatches);
+
+        int exportedCount = 0;
+        for (int batchNum = 0; batchNum < totalBatches; batchNum++) {
+            int fromIndex = batchNum * BATCH_SIZE;
+            int toIndex = Math.min(fromIndex + BATCH_SIZE, totalTests);
+            List<TestCase> batch = allTestCases.subList(fromIndex, toIndex);
+
+            log.info("Sending batch {}/{} ({} tests)...",
+                    batchNum + 1, totalBatches, batch.size());
+
+            String requestBody = jsonBuilder.buildRequestBody(batch, framework);
+            try {
+                httpClient.sendPostRequest(requestUrl, requestBody);
+                exportedCount += batch.size();
+            } catch (CliException e) {
+                throw new CliException("Failed at batch " + (batchNum + 1) + "/" + totalBatches
+                        + ": " + e.getMessage(), e);
+            } catch (Exception e) {
+                throw new CliException("Error in batch " + (batchNum + 1) + "/" + totalBatches
+                        + ": " + e.getMessage(), e);
+            }
         }
 
-        spinner.stopWithMessage("Successfully exported " + allTestCases.size()
-                + " test methods");
-
-        return allTestCases.size();
+        log.info("Successfully exported {} test methods in {} batches",
+                exportedCount, totalBatches);
+        return exportedCount;
     }
 
     private void printAllTestCases(List<TestCase> testCases) {
