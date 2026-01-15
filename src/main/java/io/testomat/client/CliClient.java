@@ -20,7 +20,7 @@ public class CliClient implements TestomatHttpClient {
 
     private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(30);
     private static final Duration GET_REQUEST_TIMEOUT = Duration.ofSeconds(30);
-    private static final Duration POST_REQUEST_TIMEOUT = Duration.ofSeconds(60);
+    private static final Duration POST_REQUEST_TIMEOUT = Duration.ofMinutes(5);
 
     private static final int MAX_RETRIES = 3;
     private static final int RETRY_DELAY_MS = 1000;
@@ -101,10 +101,23 @@ public class CliClient implements TestomatHttpClient {
             } catch (ConnectException e) {
                 lastException = new CliException("Cannot connect to testomat.io server. "
                         + "Please check your internet connection.", e);
+                System.err.println("Connection error: " + e.getMessage());
             } catch (SocketTimeoutException e) {
-                lastException = new CliException("Request timed out. The server might be busy.", e);
-            } catch (IOException | InterruptedException e) {
-                lastException = new CliException("Network error occurred", e);
+                String msg = "Request timed out after "
+                        + POST_REQUEST_TIMEOUT.getSeconds() + " seconds. Server might be busy.";
+                lastException = new CliException(msg, e);
+                System.err.println("Socket timeout: " + e.getMessage());
+            } catch (HttpTimeoutException e) {
+                lastException = new CliException("HTTP request timed out after "
+                        + POST_REQUEST_TIMEOUT.getSeconds() + " seconds.", e);
+                System.err.println("HTTP timeout: " + e.getMessage());
+            } catch (IOException e) {
+                lastException = new CliException("Network error: " + e.getMessage(), e);
+                System.err.println("IO error: " + e.getClass().getSimpleName()
+                        + ": " + e.getMessage());
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new CliException("Export interrupted", e);
             }
 
             if (attempt < MAX_RETRIES) {
@@ -121,7 +134,9 @@ public class CliClient implements TestomatHttpClient {
             attempt++;
         }
 
-        throw new CliException("Failed to send data after " + MAX_RETRIES + " attempts",
+        String errorDetail = lastException != null
+                ? lastException.getMessage() : "Unknown error";
+        throw new CliException("Failed after " + MAX_RETRIES + " attempts: " + errorDetail,
                 lastException);
     }
 
