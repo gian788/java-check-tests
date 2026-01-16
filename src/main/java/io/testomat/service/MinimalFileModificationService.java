@@ -261,7 +261,7 @@ public class MinimalFileModificationService {
         String cleanTestId = cleanTestId(testId);
 
         if (existingAnnotation.isPresent()) {
-            // Update existing annotation
+            // Update existing annotation with new ID
             return createAnnotationUpdateInsertion(lines, existingAnnotation.get(), cleanTestId);
         } else {
             // Add new annotation

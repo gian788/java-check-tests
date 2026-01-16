@@ -28,7 +28,7 @@ public class TestIdAnnotationManager {
 
     public Optional<MethodDeclaration> findMethodInCompilationUnits(
             List<CompilationUnit> compilationUnits, TestMethodInfo methodInfo, boolean verbose) {
-        
+
         if (verbose) {
             System.out.println("  Looking for method: " + methodInfo.getMethodName()
                              + " in class: " + methodInfo.getClassName()
@@ -37,19 +37,7 @@ public class TestIdAnnotationManager {
 
         Optional<MethodDeclaration> result;
 
-        String expectedFileName = extractFileName(methodInfo.getFilePath());
-        result = compilationUnits.stream()
-                .filter(cu -> isMatchingFile(cu, expectedFileName, verbose))
-                .flatMap(cu -> findMethodsInCompilationUnit(cu, methodInfo, verbose).stream())
-                .findFirst();
-
-        if (result.isPresent()) {
-            if (verbose) {
-                System.out.println("  Found method using exact filename match");
-            }
-            return result;
-        }
-
+        // First try: match by full path (most accurate for duplicate filenames)
         result = compilationUnits.stream()
                 .filter(cu -> isMatchingFileByPath(cu, methodInfo.getFilePath(), verbose))
                 .flatMap(cu -> findMethodsInCompilationUnit(cu, methodInfo, verbose).stream())
@@ -62,15 +50,10 @@ public class TestIdAnnotationManager {
             return result;
         }
 
+        // No filename fallback - path matching is required to avoid wrong file matches
+        // when multiple files have the same name across different directories
         if (verbose) {
-            System.out.println("  Method not found in any compilation unit");
-            System.out.println("  Available compilation units:");
-            for (CompilationUnit cu : compilationUnits) {
-                String fileName = cu.getStorage()
-                        .map(storage -> storage.getPath().getFileName().toString())
-                        .orElse("Unknown");
-                System.out.println("    - " + fileName);
-            }
+            System.out.println("  Method not found - path does not match any scanned file");
         }
 
         return Optional.empty();
