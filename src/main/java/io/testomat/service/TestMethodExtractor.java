@@ -266,18 +266,38 @@ public class TestMethodExtractor {
     }
 
     private String getAnnotationValue(AnnotationExpr annotation) {
-        if (annotation instanceof SingleMemberAnnotationExpr) {
-            return ((SingleMemberAnnotationExpr) annotation)
-                    .getMemberValue()
-                    .asStringLiteralExpr()
-                    .getValue();
-        } else if (annotation instanceof NormalAnnotationExpr) {
-            return ((NormalAnnotationExpr) annotation)
-                    .getPairs().stream()
-                    .filter(pair -> "value".equals(pair.getNameAsString()))
-                    .findFirst()
-                    .map(pair -> pair.getValue().asStringLiteralExpr().getValue())
-                    .orElse(null);
+        try {
+            if (annotation instanceof SingleMemberAnnotationExpr) {
+                var memberValue = ((SingleMemberAnnotationExpr) annotation).getMemberValue();
+                if (memberValue.isStringLiteralExpr()) {
+                    return memberValue.asStringLiteralExpr().getValue();
+                } else if (memberValue.isFieldAccessExpr()) {
+                    // Handle constant references like MultiTags.SMOKE
+                    return memberValue.asFieldAccessExpr().getNameAsString();
+                } else if (memberValue.isNameExpr()) {
+                    // Handle simple constant references
+                    return memberValue.asNameExpr().getNameAsString();
+                }
+            } else if (annotation instanceof NormalAnnotationExpr) {
+                return ((NormalAnnotationExpr) annotation)
+                        .getPairs().stream()
+                        .filter(pair -> "value".equals(pair.getNameAsString()))
+                        .findFirst()
+                        .map(pair -> {
+                            var value = pair.getValue();
+                            if (value.isStringLiteralExpr()) {
+                                return value.asStringLiteralExpr().getValue();
+                            } else if (value.isFieldAccessExpr()) {
+                                return value.asFieldAccessExpr().getNameAsString();
+                            } else if (value.isNameExpr()) {
+                                return value.asNameExpr().getNameAsString();
+                            }
+                            return null;
+                        })
+                        .orElse(null);
+            }
+        } catch (Exception e) {
+            // Ignore annotation parsing errors, return null
         }
         return null;
     }

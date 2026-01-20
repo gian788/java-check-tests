@@ -65,10 +65,11 @@ public class TestIdAnnotationManager {
                 method.getAnnotationByName(TEST_ID_ANNOTATION);
 
         if (existingAnnotation.isPresent()) {
-            updateExistingTestIdAnnotation(existingAnnotation.get(), method, cleanTestId);
-        } else {
-            addNewTestIdAnnotation(method, cleanTestId);
+            // Don't update existing TestId to avoid overwriting correct IDs with wrong ones
+            // due to potential matching issues (duplicate method names, etc.)
+            return;
         }
+        addNewTestIdAnnotation(method, cleanTestId);
     }
 
     public void ensureTestIdImportExists(CompilationUnit compilationUnit) {
@@ -137,35 +138,77 @@ public class TestIdAnnotationManager {
     private List<MethodDeclaration> findMethodsInCompilationUnit(
             CompilationUnit compilationUnit, TestMethodInfo methodInfo, boolean verbose) {
         List<MethodDeclaration> allMethods = compilationUnit.findAll(MethodDeclaration.class);
-        
+        String expectedMethodName = methodInfo.getMethodName();
+
         List<MethodDeclaration> matchingMethods = allMethods.stream()
-                .filter(method -> method.getNameAsString().equals(methodInfo.getMethodName()))
+                .filter(method -> matchesMethodName(method.getNameAsString(), expectedMethodName))
                 .filter(method -> isMethodInCorrectClass(method, methodInfo.getClassName(),
                         verbose))
                 .collect(Collectors.toList());
-        
+
         if (verbose) {
             System.out.println("    Found " + allMethods.size() + " total methods, "
                              + matchingMethods.size() + " matching methods");
         }
-        
+
         return matchingMethods;
+    }
+
+    private boolean matchesMethodName(String actualName, String expectedName) {
+        // Exact match
+        if (actualName.equals(expectedName)) {
+            return true;
+        }
+        // Normalized match (handles Testomat's name transformation)
+        return normalizeName(actualName).equals(normalizeName(expectedName));
+    }
+
+    private String normalizeName(String name) {
+        // Remove spaces, underscores, and convert to lowercase for comparison
+        return name.replaceAll("[\\s_]", "").toLowerCase();
+    }
+
+    private boolean matchesClassName(String actualClassName, String expectedClassName) {
+        // Exact match
+        if (actualClassName.equals(expectedClassName)) {
+            return true;
+        }
+        // Handle nested class format: "OuterClass | InnerClass"
+        // (Testomat.io API format for nested classes)
+        if (expectedClassName.contains("|")) {
+            String[] parts = expectedClassName.split("\\|");
+            for (String part : parts) {
+                if (part.trim().equals(actualClassName)) {
+                    return true;
+                }
+            }
+        }
+        // Handle nested class format: "OuterClass$InnerClass" (Java reflection format)
+        if (expectedClassName.contains("$")) {
+            String[] parts = expectedClassName.split("\\$");
+            for (String part : parts) {
+                if (part.equals(actualClassName)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private boolean isMethodInCorrectClass(MethodDeclaration method, String expectedClassName,
                                             boolean verbose) {
         Optional<ClassOrInterfaceDeclaration> classDecl = method
                 .findAncestor(ClassOrInterfaceDeclaration.class);
-        
+
         if (classDecl.isPresent()) {
             String actualClassName = classDecl.get().getNameAsString();
-            boolean matches = actualClassName.equals(expectedClassName);
-            
+            boolean matches = matchesClassName(actualClassName, expectedClassName);
+
             if (verbose) {
                 System.out.println("      Class match: " + actualClassName + " vs "
                         + expectedClassName + " -> " + matches);
             }
-            
+
             return matches;
         } else {
             if (verbose) {

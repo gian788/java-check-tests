@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./gradlew shadowJar:*)",
+      "Bash(java -jar build/libs/java-check-tests-1.0.0.jar sync:*)",
+      "Bash(ls:*)",
+      "Bash(mvn clean package:*)",
+      "Bash(java -jar target/testomatio.jar sync:*)",
+      "Bash(java -jar target/testomatio.jar import:*)",
+      "Bash(tee:*)",
+      "Bash(mvn package:*)",
+      "Bash(gh repo fork:*)",
+      "Bash(git remote add:*)",
+      "Bash(git restore:*)",
+      "Bash(git checkout:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: add batched requests for large test suites\n\n- Split large test suites \\(>1000 tests\\) into batches to prevent timeout\n- Increase POST timeout from 60s to 5 minutes for large payloads\n- Add better error logging with specific exception messages\n- Fix Lombok annotation processor configuration in pom.xml\n\nThis fixes sync failures for projects with thousands of tests where\nthe single large HTTP request would timeout after 60 seconds.\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push:*)",
+      "Bash(gh release create:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git reset:*)",
+      "Bash(gh pr create:*)",
+      "Bash(java -jar:*)",
+      "Bash(gh release delete:*)",
+      "Bash(git cherry-pick:*)",
+      "Bash(python3:*)",
+      "Bash(git -C /Users/gian/Projects/weavr/qa-opc-e2e diff)",
+      "Bash(git -C /Users/gian/Projects/weavr/qa-opc-e2e diff --stat)",
+      "Bash(git -C /Users/gian/Projects/weavr/qa-opc-e2e status)",
+      "Bash(git -C /Users/gian/Projects/weavr/qa-opc-e2e diff --cached)",
+      "Bash(git diff:*)",
+      "Bash(git -C /Users/gian/Projects/weavr/qa-opc-e2e diff --unified=5)",
+      "Bash(git -C /Users/gian/Projects/weavr/qa-opc-e2e diff --cached src/test/java/fpi/admin/epr/GetCorporateDataTests.java)",
+      "Bash(git -C /Users/gian/Projects/weavr/qa-opc-e2e restore:*)",
+      "Bash(git -C /Users/gian/Projects/weavr/qa-opc-e2e checkout:*)",
+      "Bash(git -C /Users/gian/Projects/weavr/qa-opc-e2e status --short)"
+    ]
+  }
+}

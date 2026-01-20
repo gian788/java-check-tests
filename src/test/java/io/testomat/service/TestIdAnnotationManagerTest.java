@@ -224,24 +224,25 @@ class TestIdAnnotationManagerTest {
     }
 
     @Test
-    @DisplayName("Should update existing TestId annotation with new value")
-    void shouldUpdateExistingTestIdAnnotationWithNewValue() {
+    @DisplayName("Should NOT update existing TestId annotation with new value (preserve original)")
+    void shouldNotUpdateExistingTestIdAnnotationWithNewValue() {
         // Given
         CompilationUnit cu = parseCode(TEST_CLASS_WITH_TESTID);
         MethodDeclaration method = cu.findAll(MethodDeclaration.class).stream()
                 .filter(m -> "testWithExistingId".equals(m.getNameAsString()))
                 .findFirst().get();
 
-        // When
+        // When - try to update with a different TestId
         testIdAnnotationManager.addTestIdAnnotationToMethod(method, "@T67890");
 
-        // Then
+        // Then - original TestId should be preserved, not updated
         Optional<AnnotationExpr> testIdAnnotation = method.getAnnotationByName("TestId");
         assertTrue(testIdAnnotation.isPresent(), "TestId annotation should exist");
-        
+
         assertTrue(testIdAnnotation.get().isSingleMemberAnnotationExpr());
         SingleMemberAnnotationExpr annotation = testIdAnnotation.get().asSingleMemberAnnotationExpr();
-        assertEquals("67890", annotation.getMemberValue().asStringLiteralExpr().getValue());
+        assertEquals("existing-id", annotation.getMemberValue().asStringLiteralExpr().getValue(),
+                "Existing TestId should NOT be overwritten");
     }
 
     @Test
